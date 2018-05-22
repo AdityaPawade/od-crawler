@@ -1,0 +1,67 @@
+-- This file has been generated from package.yaml by hpack version 0.28.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: e9bbd3c4282d84cf3b2bc6a90d151c8f57fe9aa60365927f672bd6365d1ccdb7
+
+name:           od-crawler
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/githubuser/od-indexer#readme>
+homepage:       https://github.com/agourlay/od-crawler#readme
+bug-reports:    https://github.com/agourlay/od-crawler/issues
+author:         agourlay
+maintainer:     agourlay
+copyright:      2018 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/agourlay/od-crawler
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_od_crawler
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable od-crawler-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_od_crawler
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , bytestring >=0.10.8.2
+    , html-conduit >=1.3.0
+    , http-conduit >=2.3.1
+    , od-crawler
+    , optparse-applicative >=0.14.2.0
+    , text >=1.2.3.0
+    , xml-conduit >=1.8.0
+  default-language: Haskell2010
+
+test-suite od-indexer-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_od_crawler
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , od-crawler
+  default-language: Haskell2010
