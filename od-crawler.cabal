@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e9bbd3c4282d84cf3b2bc6a90d151c8f57fe9aa60365927f672bd6365d1ccdb7
+-- hash: 8570028934238ffef761ae308d39d9b3927ebd3206742f3ab0752c9c85db120d
 
 name:           od-crawler
 version:        0.1.0.0
@@ -43,7 +43,8 @@ executable od-crawler-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      HTTP >=4000.3.11
+    , base >=4.7 && <5
     , bytestring >=0.10.8.2
     , html-conduit >=1.3.0
     , http-conduit >=2.3.1
