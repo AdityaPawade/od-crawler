@@ -10,8 +10,8 @@ import qualified Network.HTTP.Base as NHB
 import qualified Data.ByteString as BS
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
-import Text.HTML.DOM
-import Text.XML 
+import qualified Text.HTML.DOM as DOM
+import qualified Text.XML as XML
 import Text.XML.Cursor 
   
 
@@ -27,7 +27,7 @@ optionsParser =
 
 urlParser :: Parser String
 urlParser =
-  argument str (metavar "URL" <> help "The target URL")
+  argument str (metavar "TARGET" <> help "The target URL or the path to the file containing the target URLs")
 
 profileParser :: Parser Profile
 profileParser = option auto
@@ -53,11 +53,23 @@ profileExtensions Docs = Only ["pdf", "epub", "txt", "doc"]
 profileExtensions NoProfile = AllowAll
 
 runWithOptions :: Options -> IO ()
-runWithOptions opts =
-  let url = target opts
-      desiredExtensions = profileExtensions $ profile opts
-      config = Config desiredExtensions (verbosity opts)
-  in  businessTime config url  
+runWithOptions opts = do
+  urls <- urlsFromOption opts
+  let desiredExtensions = profileExtensions $ profile opts
+  let config = Config desiredExtensions (verbosity opts)
+  mapM_ (businessTime config) urls
+
+urlsFromOption :: Options -> IO [String]
+urlsFromOption opts =
+  let targetStr = target opts
+  in if T.isPrefixOf "http" (T.pack targetStr) then
+      pure [targetStr]
+    else
+      readUrlsFromFile targetStr
+
+readUrlsFromFile :: String -> IO [String]
+readUrlsFromFile filePath =
+  fmap lines (readFile filePath)
 
 businessTime :: Config -> String -> IO ()
 businessTime config url = do
@@ -70,7 +82,7 @@ businessTime config url = do
   let resources = map createResource links
   mapM_ (handleResource config urlTxt) resources
 
-verboseMode :: Config -> Document -> [T.Text] -> String -> IO ()
+verboseMode :: Config -> XML.Document -> [T.Text] -> String -> IO ()
 verboseMode config doc links url =
   case debug config of
     Verbose ->
@@ -109,12 +121,12 @@ httpCall url = do
   return $ getResponseBody response
 
 -- https://hackage.haskell.org/package/html-conduit-1.3.0/docs/Text-HTML-DOM.html
-bodyToDoc :: BS.ByteString -> Document
+bodyToDoc :: BS.ByteString -> XML.Document
 bodyToDoc body = 
-  parseSTChunks [TE.decodeUtf8 body]
+  DOM.parseSTChunks [TE.decodeUtf8 body]
 
 --https://hackage.haskell.org/package/xml-conduit-1.8.0/docs/Text-XML-Cursor.html
-extractLinks :: Document -> [T.Text]
+extractLinks :: XML.Document -> [T.Text]
 extractLinks doc = 
   fromDocument doc
     $/ descendant
