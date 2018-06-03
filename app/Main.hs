@@ -35,7 +35,7 @@ profileParser = option auto
   <> short 'p'
   <> metavar "PROFILE"
   <> value NoProfile
-  <> help "Profile for allowed extensions (Videos, Pictures, Music, Docs)" )
+  <> help "Profile for allowed extensions (Videos, Pictures, Music, Docs, SubTitles)" )
 
 data Verbosity = Normal | Verbose
 
@@ -50,6 +50,7 @@ profileExtensions Videos = Only ["mkv", "avi", "mp4"]
 profileExtensions Pictures = Only ["jpeg", "png", "gif", "bmp"]
 profileExtensions Music = Only ["mp3", "flac", "wave", "wav"]
 profileExtensions Docs = Only ["pdf", "epub", "txt", "doc"]
+profileExtensions SubTitles = Only ["srt", "sub"]
 profileExtensions NoProfile = AllowAll
 
 runWithOptions :: Options -> IO ()
@@ -149,7 +150,7 @@ createResource linkResource =
   else
     File linkResource  
        
-data Profile = NoProfile | Videos | Music | Pictures | Docs deriving Read
+data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
 data Options = Options { target :: String, profile :: Profile, verbosity :: Verbosity }
 
 data AllowedExtensions = AllowAll | Only { allowedExtensions :: [T.Text] }
