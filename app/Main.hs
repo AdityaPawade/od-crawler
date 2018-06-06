@@ -8,7 +8,6 @@ import Data.Semigroup ((<>))
 import Network.HTTP.Simple
 import qualified Network.HTTP.Base as NHB
 import qualified Data.ByteString as BS
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import qualified Text.HTML.DOM as DOM
 import qualified Text.XML as XML
@@ -124,7 +123,7 @@ httpCall url = do
 -- https://hackage.haskell.org/package/html-conduit-1.3.0/docs/Text-HTML-DOM.html
 bodyToDoc :: BS.ByteString -> XML.Document
 bodyToDoc body = 
-  DOM.parseSTChunks [TE.decodeUtf8 body]
+  DOM.parseBSChunks [body]
 
 --https://hackage.haskell.org/package/xml-conduit-1.8.0/docs/Text-XML-Cursor.html
 extractLinks :: XML.Document -> [T.Text]
