@@ -5,14 +5,18 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Network.HTTP.Simple
+import qualified System.IO as SI
+import qualified System.Directory as SD
+import qualified Network.HTTP.Simple as NHS
+import qualified Data.HashSet as HS
 import qualified Network.HTTP.Base as NHB
 import qualified Data.ByteString as BS
+import qualified Data.Text.IO as TIO
 import qualified Data.Text as T
 import qualified Text.HTML.DOM as DOM
 import qualified Text.XML as XML
-import Text.XML.Cursor 
-  
+import Text.XML.Cursor -- used as DSL
+
 
 main :: IO ()
 main = execParser opts >>= runWithOptions
@@ -20,13 +24,15 @@ main = execParser opts >>= runWithOptions
     opts = info (optionsParser <**> helper) ( fullDesc
       <> progDesc "Crawls open directories for tasty links")
 
+-- https://github.com/pcapriotti/optparse-applicative
 optionsParser :: Parser Options
 optionsParser =
-  Options <$> urlParser <*> profileParser <*> verbosityParser
+  Options <$> targetParser <*> profileParser <*> verbosityParser <*> directoryParser
 
-urlParser :: Parser String
-urlParser =
-  argument str (metavar "TARGET" <> help "The target URL or the path to the file containing the target URLs")
+targetParser :: Parser String
+targetParser =
+  argument str (metavar "TARGET"
+  <> help "The target URL or the path to the file containing the target URLs")
 
 profileParser :: Parser Profile
 profileParser = option auto
@@ -36,13 +42,19 @@ profileParser = option auto
   <> value NoProfile
   <> help "Profile for allowed extensions (Videos, Pictures, Music, Docs, SubTitles)" )
 
-data Verbosity = Normal | Verbose
-
 verbosityParser :: Parser Verbosity
 verbosityParser = flag Normal Verbose
   ( long "verbose"
   <> short 'v'
   <> help "Enable verbose mode" )
+
+directoryParser :: Parser(Maybe String)
+directoryParser = optional (
+  strOption
+   ( long "directory"
+    <> short 'd'
+    <> metavar "DIRECTORY"
+    <> help "The folder where to persist results - only new entries will be shown"))
 
 profileExtensions :: Profile -> AllowedExtensions
 profileExtensions Videos = Only ["mkv", "avi", "mp4"]
@@ -56,8 +68,20 @@ runWithOptions :: Options -> IO ()
 runWithOptions opts = do
   urls <- urlsFromOption opts
   let desiredExtensions = profileExtensions $ profile opts
-  let config = Config desiredExtensions (verbosity opts)
-  mapM_ (businessTime config) urls
+  let v = verbosity opts
+  let df = persistentFolder opts
+  validatePersistingFolder df
+  mapM_ (businessTime desiredExtensions v df) urls
+
+validatePersistingFolder :: Maybe String -> IO ()
+validatePersistingFolder Nothing = pure ()
+validatePersistingFolder (Just df) =
+  SD.doesDirectoryExist df >>= \exists ->
+   if not exists
+    then
+      fail("directory " ++ df ++ " does not exist")
+    else
+       pure ()
 
 urlsFromOption :: Options -> IO [String]
 urlsFromOption opts =
@@ -71,8 +95,31 @@ readUrlsFromFile :: String -> IO [String]
 readUrlsFromFile filePath =
   fmap lines (readFile filePath)
 
-businessTime :: Config -> String -> IO ()
-businessTime config url = do
+businessTime :: AllowedExtensions -> Verbosity -> Maybe String -> String -> IO ()
+businessTime ext v df url =
+  case df of
+    Nothing ->
+      crawlUrl (Config ext v Nothing) url
+    Just folderPath -> do
+      let fileName = folderPath ++ "/" ++ fileNameForURL url ++ ".txt"
+      createFileIfNotExist fileName
+      existingContent <- loadPersistedResultsForURL fileName
+      SI.withFile fileName SI.AppendMode (\handle ->
+        let upc = URLPersistentConfig fileName handle existingContent
+            config = Config ext v (Just upc)
+        in crawlUrl config url)
+
+createFileIfNotExist :: String -> IO ()
+createFileIfNotExist filePath = do
+  exists <- SD.doesFileExist filePath
+  if exists
+  then
+    pure ()
+  else
+    SI.writeFile filePath ""
+
+crawlUrl :: Config -> String -> IO ()
+crawlUrl config url = do
   body <- httpCall url
   let doc = bodyToDoc body
   let extractedLinks = extractLinks doc
@@ -82,6 +129,23 @@ businessTime config url = do
   let resources = map createResource links
   mapM_ (handleResource config urlTxt) resources
 
+fileNameForURL :: String -> String
+fileNameForURL urlS =
+  let url = T.pack urlS
+      noTrailingSlash = T.dropWhileEnd (== '/')
+      afterProtocol = last . T.splitOn "://"
+      cleaned = T.replace "/" "-"
+  in T.unpack $ (cleaned . afterProtocol . noTrailingSlash) url
+
+-- https://hackage.haskell.org/package/hashmap-1.0.0.2/docs/Data-HashSet.html
+-- A bloom filter should actually be enough to reduce memory footprint
+loadPersistedResultsForURL :: String -> IO (HS.Set T.Text)
+loadPersistedResultsForURL filePath = do
+  fileContent <- TIO.readFile filePath
+  let entries = fmap (last . T.splitOn " --> ") (T.lines fileContent)
+  let populatedSet = foldr HS.insert HS.empty entries
+  pure populatedSet
+
 verboseMode :: Config -> XML.Document -> [T.Text] -> String -> IO ()
 verboseMode config doc links url =
   case debug config of
@@ -90,24 +154,33 @@ verboseMode config doc links url =
     _ ->
       pure ()
 
-handleResource :: Config -> T.Text -> Resource -> IO()
-handleResource config url r = 
-  case r of 
-    File l | shouldPrint config l ->
-        putStrLn $ prettyLink l
-    Folder l | shouldFollow l url ->      
-        businessTime config (T.unpack $ fullLink l)
+handleResource :: Config -> T.Text -> Resource -> IO ()
+handleResource config url r =
+  case r of
+    File l | linkMatchesConfig config l ->
+      case urlPersistentConfig config of
+        Just cfg ->
+          if HS.member (fullLink l) (urlFilecontent cfg)
+            then pure ()
+            else do
+              let pretty = prettyLink l
+              TIO.putStrLn pretty
+              TIO.hPutStrLn (fileHandle cfg) pretty
+        Nothing ->
+          TIO.putStrLn $ prettyLink l
+    Folder l | shouldFollow l url ->
+        crawlUrl config (T.unpack $ fullLink l)
     _ ->
-        pure () 
+        pure ()
 
-shouldPrint :: Config -> Link -> Bool
-shouldPrint config l = 
+linkMatchesConfig :: Config -> Link -> Bool
+linkMatchesConfig config l =
   case extensions config of
     AllowAll -> True
     Only ext -> any (`T.isSuffixOf` fullLink l) ext
 
 shouldFollow :: Link -> T.Text -> Bool
-shouldFollow l url = 
+shouldFollow l url =
   let fullResourceUrl = fullLink l
       isChildren = T.isPrefixOf url fullResourceUrl
       isParentLink = T.isSuffixOf "../" fullResourceUrl
@@ -116,44 +189,48 @@ shouldFollow l url =
 -- https://hackage.haskell.org/package/http-conduit-2.3.1/docs/Network-HTTP-Simple.html
 httpCall :: String -> IO BS.ByteString
 httpCall url = do
-  req <- parseRequest url
-  response <- httpBS req
-  return $ getResponseBody response
+  req <- NHS.parseRequest url
+  response <- NHS.httpBS req
+  return $ NHS.getResponseBody response
 
 -- https://hackage.haskell.org/package/html-conduit-1.3.0/docs/Text-HTML-DOM.html
 bodyToDoc :: BS.ByteString -> XML.Document
-bodyToDoc body = 
+bodyToDoc body =
   DOM.parseBSChunks [body]
 
 --https://hackage.haskell.org/package/xml-conduit-1.8.0/docs/Text-XML-Cursor.html
 extractLinks :: XML.Document -> [T.Text]
-extractLinks doc = 
+extractLinks doc =
   fromDocument doc
     $/ descendant
     &/ element "a"
-    &.// attribute "href"    
+    &.// attribute "href"
 
-prettyLink :: Link -> String
+prettyLink :: Link -> T.Text
 prettyLink l =
   let nameStr = T.unpack (name l)
       fullNameStr = T.unpack (fullLink l)
-  in NHB.urlDecode nameStr ++ " --> " ++ fullNameStr
+      pretty = NHB.urlDecode nameStr ++ " --> " ++ fullNameStr
+  in T.pack pretty
 
 createLink :: T.Text -> T.Text -> Link
 createLink url display = Link display (T.concat [url, display])
 
 createResource :: Link -> Resource
-createResource linkResource = 
+createResource linkResource =
   if T.last (fullLink linkResource) == '/' then -- not bullet proof
     Folder linkResource
   else
-    File linkResource  
-       
+    File linkResource
+
 data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
-data Options = Options { target :: String, profile :: Profile, verbosity :: Verbosity }
+data Verbosity = Normal | Verbose
+
+data Options = Options { target :: String, profile :: Profile, verbosity :: Verbosity, persistentFolder :: Maybe String}
 
 data AllowedExtensions = AllowAll | Only { allowedExtensions :: [T.Text] }
-data Config = Config { extensions :: AllowedExtensions, debug :: Verbosity }
+data URLPersistentConfig = URLPersistentConfig { urlFilePath :: String, fileHandle :: SI.Handle, urlFilecontent :: HS.Set T.Text}
+data Config = Config { extensions :: AllowedExtensions, debug :: Verbosity, urlPersistentConfig :: Maybe URLPersistentConfig }
 
 data Link = Link { name :: T.Text, fullLink :: T.Text } deriving Show
-data Resource = Folder { link :: Link } | File { link :: Link } deriving Show   
+data Resource = Folder { link :: Link } | File { link :: Link } deriving Show
