@@ -71,6 +71,7 @@ runWithOptions opts = do
   let v = verbosity opts
   let df = persistentFolder opts
   validatePersistingFolder df
+  --FIXME do not use mapM but an abstraction that allows partial failures
   mapM_ (businessTime desiredExtensions v df) urls
 
 validatePersistingFolder :: Maybe String -> IO ()
@@ -127,6 +128,7 @@ crawlUrl config url = do
   let urlTxt = T.pack url
   let links = map (createLink urlTxt) extractedLinks
   let resources = map createResource links
+  --FIXME do not use mapM but an abstraction that allows partial failures
   mapM_ (handleResource config urlTxt) resources
 
 fileNameForURL :: String -> String
@@ -154,6 +156,7 @@ verboseMode config doc links url =
     _ ->
       pure ()
 
+--FIXME detect cycles
 handleResource :: Config -> T.Text -> Resource -> IO ()
 handleResource config url r =
   case r of
