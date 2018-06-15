@@ -5,6 +5,7 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
+import Control.Exception
 import qualified System.IO as SI
 import qualified System.Directory as SD
 import qualified Network.HTTP.Simple as NHS
@@ -71,7 +72,7 @@ runWithOptions opts = do
   let v = verbosity opts
   let df = persistentFolder opts
   validatePersistingFolder df
-  --FIXME do not use mapM but an abstraction that allows partial failures
+  --FIXME run in // with new option --parallel
   mapM_ (businessTime desiredExtensions v df) urls
 
 validatePersistingFolder :: Maybe String -> IO ()
@@ -105,8 +106,8 @@ businessTime ext v df url =
       let fileName = folderPath ++ "/" ++ fileNameForURL url ++ ".txt"
       createFileIfNotExist fileName
       existingContent <- loadPersistedResultsForURL fileName
-      SI.withFile fileName SI.AppendMode (\handle ->
-        let upc = URLPersistentConfig fileName handle existingContent
+      SI.withFile fileName SI.AppendMode (\handler ->
+        let upc = URLPersistentConfig fileName handler existingContent
             config = Config ext v (Just upc)
         in crawlUrl config url)
 
@@ -121,15 +122,20 @@ createFileIfNotExist filePath = do
 
 crawlUrl :: Config -> String -> IO ()
 crawlUrl config url = do
-  body <- httpCall url
-  let doc = bodyToDoc body
-  let extractedLinks = extractLinks doc
-  verboseMode config doc extractedLinks url
-  let urlTxt = T.pack url
-  let links = map (createLink urlTxt) extractedLinks
-  let resources = map createResource links
-  --FIXME do not use mapM but an abstraction that allows partial failures
-  mapM_ (handleResource config urlTxt) resources
+  safeBody <- safeHttpCall url
+  case safeBody of
+    Left ex -> do
+      putStrLn ex
+      pure ()
+    Right body -> do
+      let doc = bodyToDoc body
+      let extractedLinks = extractLinks doc
+      verboseMode config doc extractedLinks url
+      let urlTxt = T.pack url
+      let links = map (createLink urlTxt) extractedLinks
+      let resources = map createResource links
+       --FIXME do not use mapM but an abstraction that allows partial failures
+      mapM_ (handleResource config urlTxt) resources
 
 fileNameForURL :: String -> String
 fileNameForURL urlS =
@@ -188,6 +194,13 @@ shouldFollow l url =
       isChildren = T.isPrefixOf url fullResourceUrl
       isParentLink = T.isSuffixOf "../" fullResourceUrl
   in  isChildren && not isParentLink
+
+safeHttpCall :: String -> IO (Either String BS.ByteString)
+safeHttpCall url = do
+  result <- try (httpCall url) :: IO (Either SomeException BS.ByteString)
+  case result of
+    Left ex  -> pure $ Left (show ex)
+    Right val -> pure $ Right val
 
 -- https://hackage.haskell.org/package/http-conduit-2.3.1/docs/Network-HTTP-Simple.html
 httpCall :: String -> IO BS.ByteString
