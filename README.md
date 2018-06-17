@@ -16,5 +16,6 @@ Available options:
   -v,--verbose             Enable verbose mode
   -d,--directory DIRECTORY The folder where to persist results - only new
                            entries will be shown
+  --parallel               Crawl target URLS in parallel
   -h,--help                Show this help text
 ```

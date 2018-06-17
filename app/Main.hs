@@ -5,7 +5,8 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Control.Exception
+import qualified Control.Exception as CE
+import qualified Control.Concurrent.Async as CA
 import qualified System.IO as SI
 import qualified System.Directory as SD
 import qualified Network.HTTP.Simple as NHS
@@ -28,7 +29,7 @@ main = execParser opts >>= runWithOptions
 -- https://github.com/pcapriotti/optparse-applicative
 optionsParser :: Parser Options
 optionsParser =
-  Options <$> targetParser <*> profileParser <*> verbosityParser <*> directoryParser
+  Options <$> targetParser <*> profileParser <*> verbosityParser <*> directoryParser <*> parallelParser
 
 targetParser :: Parser String
 targetParser =
@@ -57,6 +58,11 @@ directoryParser = optional (
     <> metavar "DIRECTORY"
     <> help "The folder where to persist results - only new entries will be shown"))
 
+parallelParser :: Parser Bool
+parallelParser = switch
+  ( long "parallel"
+  <> help "Crawl target URLs in parallel" )
+
 profileExtensions :: Profile -> AllowedExtensions
 profileExtensions Videos = Only ["mkv", "avi", "mp4"]
 profileExtensions Pictures = Only ["jpeg", "png", "gif", "bmp"]
@@ -72,8 +78,12 @@ runWithOptions opts = do
   let v = verbosity opts
   let df = persistentFolder opts
   validatePersistingFolder df
-  --FIXME run in // with new option --parallel
-  mapM_ (businessTime desiredExtensions v df) urls
+  if parallel opts then
+    -- https://hackage.haskell.org/package/async-2.1.0/docs/Control-Concurrent-Async.html
+    CA.mapConcurrently (businessTime desiredExtensions v df) urls
+  else
+    mapM (businessTime desiredExtensions v df) urls
+  pure ()
 
 validatePersistingFolder :: Maybe String -> IO ()
 validatePersistingFolder Nothing = pure ()
@@ -197,7 +207,7 @@ shouldFollow l url =
 
 safeHttpCall :: String -> IO (Either String BS.ByteString)
 safeHttpCall url = do
-  result <- try (httpCall url) :: IO (Either SomeException BS.ByteString)
+  result <- CE.try (httpCall url) :: IO (Either CE.SomeException BS.ByteString)
   case result of
     Left ex  -> pure $ Left (show ex)
     Right val -> pure $ Right val
@@ -242,7 +252,7 @@ createResource linkResource =
 data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
 data Verbosity = Normal | Verbose
 
-data Options = Options { target :: String, profile :: Profile, verbosity :: Verbosity, persistentFolder :: Maybe String}
+data Options = Options { target :: String, profile :: Profile, verbosity :: Verbosity, persistentFolder :: Maybe String, parallel :: Bool}
 
 data AllowedExtensions = AllowAll | Only { allowedExtensions :: [T.Text] }
 data URLPersistentConfig = URLPersistentConfig { urlFilePath :: String, fileHandle :: SI.Handle, urlFilecontent :: HS.Set T.Text}

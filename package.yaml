@@ -30,6 +30,7 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -O2
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -50,6 +51,7 @@ executables:
     - optparse-applicative >= 0.14.2.0
     - hashmap >= 1.0.0.2
     - directory >= 1.3.0.2
+    - async >= 2.1.0
 
 tests:
   od-indexer-test:
