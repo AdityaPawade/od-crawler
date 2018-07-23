@@ -2,7 +2,10 @@
 - try unit testing with hspec
 - split code in modules
 - prevent cycles
-- limit concurrency
+- limit concurrency at root level and folder level
 - bloom filter instead of HashSet
 - do logging the haskell way
+- define workers http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
 - try a streaming lib (conduit, pipe, streamly)
+- profile and optims http://book.realworldhaskell.org/read/profiling-and-optimization.html
+- Threadscope https://wiki.haskell.org/ThreadScope
