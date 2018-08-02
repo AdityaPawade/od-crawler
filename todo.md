@@ -3,6 +3,7 @@
 - split code in modules
 - prevent cycles
 - limit concurrency at root level and folder level
+- use a real LSM-tree when appending result to disk
 - bloom filter instead of HashSet
 - do logging the haskell way
 - define workers http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
