@@ -1,4 +1,3 @@
-- support ctr+c to stop
 - try unit testing with hspec
 - split code in modules
 - prevent cycles

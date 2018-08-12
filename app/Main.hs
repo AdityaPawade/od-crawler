@@ -259,8 +259,10 @@ shouldFollow :: Link -> T.Text -> Bool
 shouldFollow l url =
   let fullResourceUrl = fullLink l
       isChildren = T.isPrefixOf url fullResourceUrl
-      isParentLink = T.isSuffixOf "../" fullResourceUrl
-  in  isChildren && not isParentLink
+      isRelativeParentLink = T.isSuffixOf "../" fullResourceUrl
+      -- 'createLink' does not handle absolute link differently
+      absoluteLink = T.head (name l) == '/'
+  in  not absoluteLink && isChildren && not isRelativeParentLink
 
 safeHttpCall :: String -> IO (Either String BS.ByteString)
 safeHttpCall url = do
@@ -293,7 +295,7 @@ extractLinks doc =
 prettyLink :: Link -> T.Text
 prettyLink l = T.concat [EN.decodeText (name l), " --> ", fullLink l]
 
---FIXME sanitize link e.g '//'
+-- Does not make a differnce between relative and absolute links
 createLink :: T.Text -> T.Text -> Link
 createLink url display = Link display (T.concat [url, display])
 
