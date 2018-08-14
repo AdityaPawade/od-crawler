@@ -1,5 +1,3 @@
-- try unit testing with hspec
-- split code in modules
 - prevent cycles
 - limit concurrency at root level and folder level
 - use a real LSM-tree when appending result to disk

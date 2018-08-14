@@ -3,6 +3,7 @@
 
 module Main where
 
+import Lib
 import Options.Applicative -- used as DSL
 import Data.Semigroup ((<>))
 import qualified System.Clock as CS
@@ -255,15 +256,6 @@ linkMatchesConfig config l =
     AllowAll -> True
     Only ext -> any (`T.isSuffixOf` fullLink l) ext
 
-shouldFollow :: Link -> T.Text -> Bool
-shouldFollow l url =
-  let fullResourceUrl = fullLink l
-      isChildren = T.isPrefixOf url fullResourceUrl
-      isRelativeParentLink = T.isSuffixOf "../" fullResourceUrl
-      -- 'createLink' does not handle absolute link differently
-      absoluteLink = T.head (name l) == '/'
-  in  not absoluteLink && isChildren && not isRelativeParentLink
-
 safeHttpCall :: String -> IO (Either String BS.ByteString)
 safeHttpCall url = do
   result <- CE.try (httpCall url) :: IO (Either CE.SomeException BS.ByteString)
@@ -294,17 +286,6 @@ extractLinks doc =
 --https://hackage.haskell.org/package/uri-encode-1.5.0.5/docs/Network-URI-Encode.html
 prettyLink :: Link -> T.Text
 prettyLink l = T.concat [EN.decodeText (name l), " --> ", fullLink l]
-
--- Does not make a differnce between relative and absolute links
-createLink :: T.Text -> T.Text -> Link
-createLink url display = Link display (T.concat [url, display])
-
-createResource :: Link -> Resource
-createResource linkResource =
-  if T.last (fullLink linkResource) == '/' then -- not bullet proof
-    Folder linkResource
-  else
-    File linkResource
 
 data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
 data Verbosity = Normal | Verbose
@@ -339,6 +320,3 @@ data Config = Config {
   urlPersistentConfig :: Maybe URLPersistentConfig,
   metrics :: Maybe Metrics
 }
-
-data Link = Link { name :: T.Text, fullLink :: T.Text } deriving Show
-data Resource = Folder { link :: Link } | File { link :: Link } deriving Show
