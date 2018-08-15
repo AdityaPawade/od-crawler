@@ -30,6 +30,12 @@ spec = do
       let expected = Link "b" (T.pack "https://root.com/a/b/")
       createLink url display `shouldBe` expected
 
+    it "full parent link" $ do
+      let display  = T.pack "https://root.com/a/b/"
+      let url      = T.pack "https://root.com/a/b/c/"
+      let expected = Link "https://root.com/a/b/" (T.pack "https://root.com/a/b/")
+      createLink url display `shouldBe` expected
+
   describe "shouldFollow" $ do
     it "regular deeper link" $ do
       let display    = T.pack "d/"

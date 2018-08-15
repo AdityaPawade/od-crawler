@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3b240e0df02f74f935d1d72f4f9e6d36740cd3a74ff00aa5fe4270867744ad47
+-- hash: ffa5e43f4175e4ab3f70e7594dfbb750c1f34de79cedc726f517bacc41f79657
 
 name:           od-crawler
 version:        0.1.0.0
@@ -63,8 +63,6 @@ executable od-crawler-exe
     , od-crawler
     , optparse-applicative >=0.14.2.0
     , text >=1.2.3.0
-    , unordered-containers >=0.2.9.0
-    , xml-conduit >=1.8.0
   default-language: Haskell2010
 
 test-suite od-indexer-test
