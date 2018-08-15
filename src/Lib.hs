@@ -5,6 +5,7 @@ module Lib where
 import Metrics
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import qualified Control.Concurrent.Async as CA
 import qualified Control.Exception as CE
 import qualified System.Directory as SD
 import qualified System.IO as SI
@@ -18,6 +19,8 @@ import Text.XML.Cursor -- used as DSL
 
 data Link = Link { name :: T.Text, fullLink :: T.Text } deriving (Show, Eq)
 data Resource = Folder { link :: Link } | File { link :: Link } deriving (Show, Eq)
+
+data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
 
 data Verbosity = Normal | Verbose
 
@@ -34,6 +37,60 @@ data Config = Config {
   urlPersistentConfig :: Maybe URLPersistentConfig,
   metrics :: Maybe Metrics
 }
+
+data Options = Options {
+  target :: String,
+  profile :: Profile,
+  verbosity :: Verbosity,
+  persistentFolder :: Maybe String,
+  parallel :: Bool,
+  monitoring :: Maybe Int
+}
+
+runWithOptions :: Options -> IO ()
+runWithOptions opts = do
+  urls <- urlsFromOption opts
+  let desiredExtensions = profileExtensions $ profile opts
+  let v = verbosity opts
+  let df = persistentFolder opts
+  metricsHandler <- handleMonitoring $ monitoring opts
+  validatePersistingFolder df
+  if parallel opts then
+    -- https://hackage.haskell.org/package/async-2.1.0/docs/Control-Concurrent-Async.html
+    -- FIXME limit number of concurrent run
+    CA.mapConcurrently_ (businessTime desiredExtensions v df metricsHandler) urls
+  else
+    mapM_ (businessTime desiredExtensions v df metricsHandler) urls
+
+validatePersistingFolder :: Maybe String -> IO ()
+validatePersistingFolder Nothing = pure ()
+validatePersistingFolder (Just df) =
+  SD.doesDirectoryExist df >>= \exists ->
+   if not exists
+    then
+      fail("directory " ++ df ++ " does not exist")
+    else
+       pure ()
+
+urlsFromOption :: Options -> IO [String]
+urlsFromOption opts =
+  let targetStr = target opts
+  in if T.isPrefixOf "http" (T.pack targetStr) then
+      pure [targetStr]
+    else
+      readUrlsFromFile targetStr
+
+readUrlsFromFile :: String -> IO [String]
+readUrlsFromFile filePath =
+  fmap lines (readFile filePath)
+
+profileExtensions :: Profile -> AllowedExtensions
+profileExtensions Videos = Only ["mkv", "avi", "mp4"]
+profileExtensions Pictures = Only ["jpeg", "png", "gif", "bmp"]
+profileExtensions Music = Only ["mp3", "flac", "wave", "wav"]
+profileExtensions Docs = Only ["pdf", "epub", "txt", "doc"]
+profileExtensions SubTitles = Only ["srt", "sub"]
+profileExtensions NoProfile = AllowAll
 
 createLink :: T.Text -> T.Text -> Link
 createLink url display

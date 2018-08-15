@@ -56,10 +56,7 @@ executables:
     - -Wredundant-constraints
     dependencies:
     - od-crawler
-    - text >= 1.2.3.0
     - optparse-applicative >= 0.14.2.0
-    - directory >= 1.3.1.5
-    - async >= 2.2.1
 
 tests:
   od-indexer-test:
