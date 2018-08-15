@@ -1,5 +1,7 @@
 # od-crawler
 
+[![Build Status](https://travis-ci.org/agourlay/od-cralwer.svg?branch=master)](https://travis-ci.org/agourlay/od-crawler)
+
 Crawler for open directories.
 
 `Open directories are unprotected directories of pics, vids, music, software and otherwise interesting files.`
