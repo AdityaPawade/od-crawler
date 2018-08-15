@@ -4,26 +4,16 @@
 module Main where
 
 import Lib
+import Metrics
 import Options.Applicative -- used as DSL
 import Data.Semigroup ((<>))
-import qualified System.Clock as CS
-import qualified System.Remote.Monitoring as M
-import qualified System.Metrics.Distribution as MD
-import qualified System.Remote.Counter as MC
-import qualified Control.Exception as CE
 import qualified Control.Concurrent.Async as CA
 import qualified System.IO as SI
 import qualified System.Directory as SD
-import qualified Network.HTTP.Simple as NHS
 import qualified Data.HashSet as HS
-import qualified Network.URI.Encode as EN
-import qualified Data.ByteString as BS
 import qualified Data.Text.IO as TIO
 import qualified Data.Text as T
-import qualified Text.HTML.DOM as DOM
 import qualified Text.XML as XML
-import Text.XML.Cursor -- used as DSL
-
 
 main :: IO ()
 main = execParser opts >>= runWithOptions
@@ -98,19 +88,6 @@ runWithOptions opts = do
     CA.mapConcurrently_ (businessTime desiredExtensions v df metricsHandler) urls
   else
     mapM_ (businessTime desiredExtensions v df metricsHandler) urls
-
--- https://hackage.haskell.org/package/ekg
-handleMonitoring :: Maybe Int -> IO (Maybe Metrics)
-handleMonitoring Nothing =
-  pure Nothing
-handleMonitoring (Just p) = do
-  handle <- M.forkServer "localhost" p
-  inputUrlsProcessedCounter <- M.getCounter "crawler.input_urls_processed" handle
-  foldersCounter <- M.getCounter "crawler.folders" handle
-  fileCounter <- M.getCounter "crawler.files" handle
-  errorsCounter <- M.getCounter "crawler.errors" handle
-  httpLatencyDistribution <- M.getDistribution "crawler.http_latency_ms" handle
-  pure $ Just $ Metrics httpLatencyDistribution inputUrlsProcessedCounter foldersCounter fileCounter errorsCounter
 
 validatePersistingFolder :: Maybe String -> IO ()
 validatePersistingFolder Nothing = pure ()
@@ -227,65 +204,11 @@ handleResource config url r =
     _ ->
         pure ()
 
-timedMs :: IO a -> IO (a, Double)
-timedMs m = do
-    start <- getTimeNs
-    a <- m
-    end <- getTimeNs
-    pure (a,  end / 1000000 - start / 1000000)
-
--- https://www.stackage.org/haddock/lts-12.0/clock-0.7.2/System-Clock.html
-getTimeNs :: IO Double
-getTimeNs = fmap (fromIntegral . CS.toNanoSecs) (CS.getTime CS.Monotonic)
-
-incrementCounter :: Maybe Metrics -> (Metrics -> MC.Counter) -> IO ()
-incrementCounter mm f =
-  case mm of
-    Nothing -> pure ()
-    Just m ->  MC.inc $ f m
-
-addToDistribution :: Maybe Metrics -> (Metrics -> MD.Distribution) -> Double -> IO ()
-addToDistribution mm f d =
-  case mm of
-    Nothing -> pure ()
-    Just m ->  MD.add (f m) d
-
 linkMatchesConfig :: Config -> Link -> Bool
 linkMatchesConfig config l =
   case extensions config of
     AllowAll -> True
     Only ext -> any (`T.isSuffixOf` fullLink l) ext
-
-safeHttpCall :: String -> IO (Either String BS.ByteString)
-safeHttpCall url = do
-  result <- CE.try (httpCall url) :: IO (Either CE.SomeException BS.ByteString)
-  case result of
-    Left ex  -> pure $ Left (show ex)
-    Right val -> pure $ Right val
-
--- https://hackage.haskell.org/package/http-conduit-2.3.1/docs/Network-HTTP-Simple.html
-httpCall :: String -> IO BS.ByteString
-httpCall url = do
-  req <- NHS.parseRequest url
-  response <- NHS.httpBS req
-  return $ NHS.getResponseBody response
-
--- https://hackage.haskell.org/package/html-conduit-1.3.0/docs/Text-HTML-DOM.html
-bodyToDoc :: BS.ByteString -> XML.Document
-bodyToDoc body =
-  DOM.parseBSChunks [body]
-
---https://hackage.haskell.org/package/xml-conduit-1.8.0/docs/Text-XML-Cursor.html
-extractLinks :: XML.Document -> [T.Text]
-extractLinks doc =
-  fromDocument doc
-    $/ descendant
-    &/ element "a"
-    &.// attribute "href"
-
---https://hackage.haskell.org/package/uri-encode-1.5.0.5/docs/Network-URI-Encode.html
-prettyLink :: Link -> T.Text
-prettyLink l = T.concat [EN.decodeText (name l), " --> ", fullLink l]
 
 data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
 data Verbosity = Normal | Verbose
@@ -304,14 +227,6 @@ data URLPersistentConfig = URLPersistentConfig {
   urlFilePath :: String,
   fileHandle :: SI.Handle,
   urlFilecontent :: HS.HashSet T.Text
-}
-
-data Metrics =  Metrics {
-  httpLatency :: MD.Distribution,
-  inputUrlsProcessed :: MC.Counter,
-  folders :: MC.Counter,
-  files :: MC.Counter,
-  errors :: MC.Counter
 }
 
 data Config = Config {
