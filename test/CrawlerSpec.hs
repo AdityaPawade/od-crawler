@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module LibSpec (spec) where
+module CrawlerSpec (spec) where
 
-import Lib
+import Crawler
 import Test.Hspec
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BS

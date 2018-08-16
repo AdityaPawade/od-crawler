@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lib where
+module Crawler where
 
 import Metrics
+import Storage
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Control.Concurrent.Async as CA
@@ -214,7 +215,6 @@ crawlUrl config url = do
         -- FIXME handle resources in //
       mapM_ (handleResource config urlTxt) resources
 
-
 businessTime :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics  -> String -> IO ()
 businessTime ext v df m url =
   case df of
@@ -222,7 +222,7 @@ businessTime ext v df m url =
       crawlUrl (Config ext v Nothing m) url
       incrementCounter m inputUrlsProcessed
     Just folderPath -> do
-      let fileName = folderPath ++ "/" ++ fileNameForURL url ++ ".txt"
+      let fileName = folderPath ++ "/" ++ fileNameForURL url
       createFileIfNotExist fileName
       existingContent <- loadPersistedResultsForURL fileName
       SI.withFile fileName SI.AppendMode (\handler ->
@@ -231,29 +231,3 @@ businessTime ext v df m url =
         in do
           crawlUrl config url
           incrementCounter m inputUrlsProcessed)
-
-createFileIfNotExist :: String -> IO ()
-createFileIfNotExist filePath = do
-  exists <- SD.doesFileExist filePath
-  if exists
-  then
-    pure ()
-  else
-    SI.writeFile filePath ""
-
-fileNameForURL :: String -> String
-fileNameForURL urlS =
-  let url = T.pack urlS
-      noTrailingSlash = T.dropWhileEnd (== '/')
-      afterProtocol = last . T.splitOn "://"
-      cleaned = T.replace "/" "-"
-  in T.unpack $ (cleaned . afterProtocol . noTrailingSlash) url
-
--- https://www.stackage.org/haddock/lts-11.17/unordered-containers-0.2.9.0/Data-HashSet.html
--- A bloom filter should actually be enough to reduce memory footprint
-loadPersistedResultsForURL :: String -> IO (HS.HashSet T.Text)
-loadPersistedResultsForURL filePath = do
-  fileContent <- TIO.readFile filePath
-  let entries = fmap (last . T.splitOn " --> ") (T.lines fileContent)
-  let populatedSet = foldr HS.insert HS.empty entries
-  pure populatedSet

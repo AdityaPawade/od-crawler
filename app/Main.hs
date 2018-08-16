@@ -3,7 +3,7 @@
 
 module Main where
 
-import Lib
+import Crawler
 import Options.Applicative -- used as DSL
 import Data.Semigroup ((<>))
 

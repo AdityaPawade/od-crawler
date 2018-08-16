@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a6dafd752e8662e2cc5658e988f6a5ef7973f2ed548df95e40520042a379f089
+-- hash: 5392fbcf86cd4bd38898e83796416702c32a5c901b471ff9b3a3daecaba263f6
 
 name:           od-crawler
 version:        0.1.0.0
@@ -26,8 +26,9 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Crawler
       Metrics
+      Storage
   other-modules:
       Paths_od_crawler
   hs-source-dirs:
@@ -66,7 +67,8 @@ test-suite od-indexer-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      LibSpec
+      CrawlerSpec
+      StorageSpec
       Paths_od_crawler
   hs-source-dirs:
       test
