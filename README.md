@@ -1,6 +1,6 @@
 # od-crawler
 
-[![Build Status](https://travis-ci.org/agourlay/od-cralwer.svg?branch=master)](https://travis-ci.org/agourlay/od-crawler)
+[![Build Status](https://travis-ci.org/agourlay/od-crawler.svg?branch=master)](https://travis-ci.org/agourlay/od-crawler)
 
 Crawler for open directories.
 
