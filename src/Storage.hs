@@ -8,6 +8,10 @@ import qualified Data.HashSet as HS
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
+readUrlsFromFile :: String -> IO [String]
+readUrlsFromFile filePath =
+  fmap lines (readFile filePath)
+
 createFileIfNotExist :: String -> IO ()
 createFileIfNotExist filePath = do
   exists <- SD.doesFileExist filePath
@@ -33,3 +37,13 @@ loadPersistedResultsForURL filePath = do
   let entries = fmap (last . T.splitOn " --> ") (T.lines fileContent)
   let populatedSet = foldr HS.insert HS.empty entries
   pure populatedSet
+
+validatePersistingFolder :: Maybe String -> IO ()
+validatePersistingFolder Nothing = pure ()
+validatePersistingFolder (Just df) =
+  SD.doesDirectoryExist df >>= \exists ->
+   if not exists
+    then
+      fail("directory " ++ df ++ " does not exist")
+    else
+       pure ()

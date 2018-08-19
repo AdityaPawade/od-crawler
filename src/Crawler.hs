@@ -8,7 +8,6 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Control.Concurrent.Async as CA
 import qualified Control.Exception as CE
-import qualified System.Directory as SD
 import qualified System.IO as SI
 import qualified Data.HashSet as HS
 import qualified Network.HTTP.Simple as NHS
@@ -63,16 +62,6 @@ runWithOptions opts = do
   else
     mapM_ (businessTime desiredExtensions v df metricsHandler) urls
 
-validatePersistingFolder :: Maybe String -> IO ()
-validatePersistingFolder Nothing = pure ()
-validatePersistingFolder (Just df) =
-  SD.doesDirectoryExist df >>= \exists ->
-   if not exists
-    then
-      fail("directory " ++ df ++ " does not exist")
-    else
-       pure ()
-
 urlsFromOption :: Options -> IO [String]
 urlsFromOption opts =
   let targetStr = target opts
@@ -80,10 +69,6 @@ urlsFromOption opts =
       pure [targetStr]
     else
       readUrlsFromFile targetStr
-
-readUrlsFromFile :: String -> IO [String]
-readUrlsFromFile filePath =
-  fmap lines (readFile filePath)
 
 profileExtensions :: Profile -> AllowedExtensions
 profileExtensions Videos = Only ["mkv", "avi", "mp4"]
