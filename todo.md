@@ -1,10 +1,14 @@
+- use an alternative safer Prelude
+- try https://github.com/mrkkrp/modern-uri
 - property testing with Hedgedog https://github.com/hedgehogqa/haskell-hedgehog
 - prevent cycles
 - limit concurrency at root level and folder level
+- have a look at parallelIO https://hackage.haskell.org/package/parallel-io-0.3.3
 - use a real LSM-tree when appending result to disk
 - bloom filter instead of HashSet
 - do logging the haskell way
 - define workers http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
+- https://www.fpcomplete.com/blog/2016/11/comparative-concurrency-with-haskell
 - compare perf with Streamly https://github.com/composewell/streamly
 - profile and optims http://book.realworldhaskell.org/read/profiling-and-optimization.html
 - Threadscope https://wiki.haskell.org/ThreadScope

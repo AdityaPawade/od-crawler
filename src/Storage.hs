@@ -5,7 +5,9 @@ module Storage where
 import qualified System.Directory as SD
 import qualified System.IO as SI
 import qualified Data.HashSet as HS
+import Data.HashSet (HashSet)
 import qualified Data.Text as T
+import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 
 readUrlsFromFile :: String -> IO [String]
@@ -31,7 +33,7 @@ fileNameForURL urlS =
 
 -- https://www.stackage.org/haddock/lts-11.17/unordered-containers-0.2.9.0/Data-HashSet.html
 -- A bloom filter should actually be enough to reduce memory footprint
-loadPersistedResultsForURL :: String -> IO (HS.HashSet T.Text)
+loadPersistedResultsForURL :: String -> IO (HashSet Text)
 loadPersistedResultsForURL filePath = do
   fileContent <- TIO.readFile filePath
   let entries = fmap (last . T.splitOn " --> ") (T.lines fileContent)

@@ -5,14 +5,16 @@ module Metrics where
 import qualified System.Clock as CS
 import qualified System.Remote.Monitoring as M
 import qualified System.Remote.Counter as MC
+import System.Remote.Counter (Counter)
 import qualified System.Metrics.Distribution as MD
+import System.Metrics.Distribution (Distribution)
 
 data Metrics =  Metrics {
-  httpLatency :: MD.Distribution,
-  inputUrlsProcessed :: MC.Counter,
-  folders :: MC.Counter,
-  files :: MC.Counter,
-  errors :: MC.Counter
+  httpLatency :: Distribution,
+  inputUrlsProcessed :: Counter,
+  folders :: Counter,
+  files :: Counter,
+  errors :: Counter
 }
 
 -- https://hackage.haskell.org/package/ekg
@@ -28,7 +30,6 @@ handleMonitoring (Just p) = do
   httpLatencyDistribution <- M.getDistribution "crawler.http_latency_ms" handle
   pure $ Just $ Metrics httpLatencyDistribution inputUrlsProcessedCounter foldersCounter fileCounter errorsCounter
 
-
 timedMs :: IO a -> IO (a, Double)
 timedMs m = do
     start <- getTimeNs
@@ -40,13 +41,13 @@ timedMs m = do
 getTimeNs :: IO Double
 getTimeNs = fmap (fromIntegral . CS.toNanoSecs) (CS.getTime CS.Monotonic)
 
-incrementCounter :: Maybe Metrics -> (Metrics -> MC.Counter) -> IO ()
+incrementCounter :: Maybe Metrics -> (Metrics -> Counter) -> IO ()
 incrementCounter mm f =
   case mm of
     Nothing -> pure ()
     Just m ->  MC.inc $ f m
 
-addToDistribution :: Maybe Metrics -> (Metrics -> MD.Distribution) -> Double -> IO ()
+addToDistribution :: Maybe Metrics -> (Metrics -> Distribution) -> Double -> IO ()
 addToDistribution mm f d =
   case mm of
     Nothing -> pure ()
