@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5392fbcf86cd4bd38898e83796416702c32a5c901b471ff9b3a3daecaba263f6
+-- hash: 3ca61210dec4c4f971c7f13d1fd67f5ff44d467d6fb37e14d2de0ecd39e8f98b
 
 name:           od-crawler
 version:        0.1.0.0
@@ -15,10 +17,9 @@ copyright:      2018 Author name here
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+    ChangeLog.md
 
 source-repository head
   type: git
@@ -41,13 +42,12 @@ library
     , directory >=1.3.1.5
     , ekg >=0.4.0.15
     , ekg-core >=0.1.1.4
-    , html-conduit >=1.3.1
+    , html-conduit >=1.3.2
     , http-conduit >=2.3.2
-    , optparse-applicative >=0.14.2.0
-    , text >=1.2.3.0
+    , text >=1.2.3.1
     , unordered-containers >=0.2.9.0
     , uri-encode >=1.5.0.5
-    , xml-conduit >=1.8.0
+    , xml-conduit >=1.8.0.1
   default-language: Haskell2010
 
 executable od-crawler-exe
@@ -60,7 +60,7 @@ executable od-crawler-exe
   build-depends:
       base >=4.7 && <5
     , od-crawler
-    , optparse-applicative >=0.14.2.0
+    , optparse-applicative >=0.14.3.0
   default-language: Haskell2010
 
 test-suite od-indexer-test

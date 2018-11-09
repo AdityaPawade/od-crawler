@@ -1,5 +1,6 @@
 - use an alternative safer Prelude
 - try https://github.com/mrkkrp/modern-uri
+- try to write a benchmark with criterion https://github.com/bos/criterion
 - property testing with Hedgedog https://github.com/hedgehogqa/haskell-hedgehog
 - prevent cycles
 - limit concurrency at root level and folder level
@@ -12,3 +13,4 @@
 - compare perf with Streamly https://github.com/composewell/streamly
 - profile and optims http://book.realworldhaskell.org/read/profiling-and-optimization.html
 - Threadscope https://wiki.haskell.org/ThreadScope
+- http://www.well-typed.com/blog/86/
