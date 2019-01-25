@@ -9,8 +9,10 @@
 - bloom filter instead of HashSet
 - do logging the haskell way
 - define workers http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
+- http://hackage.haskell.org/package/async-pool-0.9.0.2/docs/Control-Concurrent-Async-Pool.html#t:Async
 - https://www.fpcomplete.com/blog/2016/11/comparative-concurrency-with-haskell
 - compare perf with Streamly https://github.com/composewell/streamly
 - profile and optims http://book.realworldhaskell.org/read/profiling-and-optimization.html
 - Threadscope https://wiki.haskell.org/ThreadScope
 - http://www.well-typed.com/blog/86/
+- concurrent Streaming https://github.com/willtim/Atavachron/blob/master/src/Atavachron/Streaming.hs#L59

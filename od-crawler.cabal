@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.0.
+-- This file has been generated from package.yaml by hpack version 0.31.1.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3ca61210dec4c4f971c7f13d1fd67f5ff44d467d6fb37e14d2de0ecd39e8f98b
+-- hash: a8b8c6b07fbaacb562f4be1efeadc5675fabf40ad283228b7f732fc3eaaddf16
 
 name:           od-crawler
 version:        0.1.0.0
@@ -41,7 +41,7 @@ library
     , clock >=0.7.2
     , directory >=1.3.1.5
     , ekg >=0.4.0.15
-    , ekg-core >=0.1.1.4
+    , ekg-core >=0.1.1.6
     , html-conduit >=1.3.2
     , http-conduit >=2.3.2
     , text >=1.2.3.1
