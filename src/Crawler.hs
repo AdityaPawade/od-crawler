@@ -1,78 +1,41 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Crawler where
 
 import Metrics
 import Storage
+import Util
+import Types
+
 import qualified Data.Text as T
 import Data.Text (Text)
-import qualified Data.Text.IO as TIO
-import qualified Control.Concurrent.Async as CA
+import qualified Data.Text.IO as TIO (putStrLn, hPutStrLn)
 import qualified Control.Exception as CE
 import qualified System.IO as SI
-import System.IO (Handle)
 import qualified Data.HashSet as HS
-import Data.HashSet (HashSet)
 import qualified Network.HTTP.Simple as NHS
 import qualified Network.URI.Encode as EN
-import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import qualified Text.HTML.DOM as DOM
 import qualified Text.XML as XML
 import Text.XML.Cursor -- used as DSL
 
-data Link = Link { name :: Text, fullLink :: Text } deriving (Show, Eq)
-data Resource = Folder { link :: Link } | File { link :: Link } deriving (Show, Eq)
-
-data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
-
-data Verbosity = Normal | Verbose
-
-data AllowedExtensions = AllowAll | Only { allowedExtensions :: [Text] }
-data URLPersistentConfig = URLPersistentConfig {
-  urlFilePath :: String,
-  fileHandle :: Handle,
-  urlFilecontent :: HashSet Text
-}
-
-data Config = Config {
-  extensions :: AllowedExtensions,
-  debug :: Verbosity,
-  urlPersistentConfig :: Maybe URLPersistentConfig,
-  metrics :: Maybe Metrics
-}
-
-data Options = Options {
-  target :: String,
-  profile :: Profile,
-  verbosity :: Verbosity,
-  persistentFolder :: Maybe String,
-  parallel :: Bool,
-  monitoring :: Maybe Int
-}
-
 runWithOptions :: Options -> IO ()
 runWithOptions opts = do
-  urls <- urlsFromOption opts
   let desiredExtensions = profileExtensions $ profile opts
   let v = verbosity opts
   let df = persistentFolder opts
-  metricsHandler <- handleMonitoring $ monitoring opts
+  let par = if parallel opts then 10 else 1
+  urls <- urlsFromOption opts
   validatePersistingFolder df
-  if parallel opts then
-    -- https://hackage.haskell.org/package/async-2.1.0/docs/Control-Concurrent-Async.html
-    -- FIXME limit number of concurrent run
-    CA.mapConcurrently_ (processRootURL desiredExtensions v df metricsHandler) urls
-  else
-    mapM_ (processRootURL desiredExtensions v df metricsHandler) urls
+  metricsHandler <- handleMonitoring $ monitoring opts
+  parallelChunking par urls (processRootURL desiredExtensions v df metricsHandler)
 
-urlsFromOption :: Options -> IO [String]
+urlsFromOption :: Options -> IO [Url]
 urlsFromOption opts =
-  let targetStr = target opts
-  in if T.isPrefixOf "http" (T.pack targetStr) then
-      pure [targetStr]
-    else
-      readUrlsFromFile targetStr
+  if T.isPrefixOf "http" targetTxt then
+    pure [targetTxt]
+  else
+    readUrlsFromFile $ T.unpack targetTxt
+  where targetTxt = target opts
 
 profileExtensions :: Profile -> AllowedExtensions
 profileExtensions Videos = Only ["mkv", "avi", "mp4"]
@@ -135,24 +98,25 @@ extractLinks doc =
     &.// attribute "href"
 
 -- https://hackage.haskell.org/package/http-conduit-2.3.1/docs/Network-HTTP-Simple.html
-httpCall :: String -> IO ByteString
+httpCall :: Url -> IO ByteString
 httpCall url = do
-  req <- NHS.parseRequest url
+  req <- NHS.parseRequest $ T.unpack url
   response <- NHS.httpBS req
   pure $ NHS.getResponseBody response
 
-safeHttpCall :: String -> IO (Either String ByteString)
+safeHttpCall :: Url -> IO (Either String ByteString)
 safeHttpCall url = do
   result <- CE.try (httpCall url) :: IO (Either CE.SomeException ByteString)
   case result of
     Left ex  -> pure $ Left (show ex)
     Right val -> pure $ Right val
 
-verboseMode :: Config -> XML.Document -> [Text] -> String -> IO ()
+verboseMode :: Config -> XML.Document -> [Text] -> Url -> IO ()
 verboseMode config doc links url =
   case debug config of
     Verbose ->
-      putStrLn("found " ++ show (length links) ++ " links for URL " ++ url ++ " in page " ++ show doc)
+      TIO.putStrLn message
+      where message = T.concat ["found ", T.pack (show (length links)), " links for URL ", url, " in page ", T.pack (show doc)]
     _ ->
       pure ()
 
@@ -163,30 +127,32 @@ linkMatchesConfig config l =
     Only ext -> any (`T.isSuffixOf` fullLink l) ext
 
 --FIXME detect cycles
-handleResource :: Config -> Text -> Resource -> IO ()
-handleResource config url r =
+handleResource :: Config -> Int -> Text -> Resource -> IO ()
+handleResource config depth url r =
   case r of
     File l | linkMatchesConfig config l ->
       case urlPersistentConfig config of
-        Just cfg ->
+        Just cfg -> do
+          incrementCounter (metrics config) files
           if HS.member (fullLink l) (urlFilecontent cfg)
-            then pure ()
+            then pure()
             else do
               --FIXME update Set to avoid possible duplicate in the page
               let pretty = prettyLink l
               TIO.putStrLn pretty
               TIO.hPutStrLn (fileHandle cfg) pretty
-              incrementCounter (metrics config) files
-        Nothing ->
+              incrementCounter (metrics config) newFiles
+        Nothing -> do
+          incrementCounter (metrics config) files
           TIO.putStrLn $ prettyLink l
     Folder l | shouldFollow l url -> do
         incrementCounter (metrics config) folders
-        crawlUrl config (T.unpack $ fullLink l)
+        crawlUrl config (depth + 1) (fullLink l)
     _ ->
         pure ()
 
-crawlUrl :: Config -> String -> IO ()
-crawlUrl config url = do
+crawlUrl :: Config -> Int -> Url -> IO ()
+crawlUrl config depth url = do
   (safeBody, duration) <- timedMs $ safeHttpCall url
   case safeBody of
     Left ex -> do
@@ -198,17 +164,17 @@ crawlUrl config url = do
       let doc = bodyToDoc body
       let extractedLinks = extractLinks doc
       verboseMode config doc extractedLinks url
-      let urlTxt = T.pack url
-      let links = map (createLink urlTxt) extractedLinks
+      let links = map (createLink url) extractedLinks
       let resources = map createResource links
-        -- FIXME handle resources in //
-      mapM_ (handleResource config urlTxt) resources
+      -- at the root level - we process links by batches of 3 for speed
+      let par = if depth == 0 then 3 else 1
+      parallelChunking par resources (handleResource config depth url)
 
-processRootURL :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics  -> String -> IO ()
+processRootURL :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics  -> Url -> IO ()
 processRootURL ext v df m url =
   case df of
     Nothing -> do
-      crawlUrl (Config ext v Nothing m) url
+      crawlUrl (Config ext v Nothing m) 0 url
       incrementCounter m inputUrlsProcessed
     Just folderPath -> do
       let fileName = folderPath ++ "/" ++ fileNameForURL url
@@ -218,5 +184,5 @@ processRootURL ext v df m url =
         let upc = URLPersistentConfig fileName handler existingContent
             config = Config ext v (Just upc) m
         in do
-          crawlUrl config url
+          crawlUrl config 0 url
           incrementCounter m inputUrlsProcessed)

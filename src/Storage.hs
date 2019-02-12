@@ -1,6 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Storage where
+
+import Types
 
 import qualified System.Directory as SD
 import qualified System.IO as SI
@@ -10,9 +10,9 @@ import qualified Data.Text as T
 import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 
-readUrlsFromFile :: String -> IO [String]
+readUrlsFromFile :: String -> IO [Url]
 readUrlsFromFile filePath =
-  fmap lines (readFile filePath)
+  fmap T.lines (TIO.readFile filePath)
 
 createFileIfNotExist :: String -> IO ()
 createFileIfNotExist filePath = do
@@ -22,10 +22,9 @@ createFileIfNotExist filePath = do
   else
     SI.writeFile filePath ""
 
-fileNameForURL :: String -> String
-fileNameForURL urlS =
-  let url = T.pack urlS
-      noTrailingSlash = T.dropWhileEnd (== '/')
+fileNameForURL :: Url -> String
+fileNameForURL url =
+  let noTrailingSlash = T.dropWhileEnd (== '/')
       afterProtocol = last . T.splitOn "://"
       cleaned = T.replace "/" "-"
       composed = T.unpack $ (cleaned . afterProtocol . noTrailingSlash) url

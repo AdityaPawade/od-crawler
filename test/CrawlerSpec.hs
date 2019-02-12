@@ -1,9 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module CrawlerSpec (spec) where
 
 import Crawler
+import Types
 import Test.Hspec
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BS

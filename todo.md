@@ -3,7 +3,6 @@
 - try to write a benchmark with criterion https://github.com/bos/criterion
 - property testing with Hedgedog https://github.com/hedgehogqa/haskell-hedgehog
 - prevent cycles
-- limit concurrency at root level and folder level
 - have a look at parallelIO https://hackage.haskell.org/package/parallel-io-0.3.3
 - use a real LSM-tree when appending result to disk
 - bloom filter instead of HashSet
@@ -16,3 +15,4 @@
 - Threadscope https://wiki.haskell.org/ThreadScope
 - http://www.well-typed.com/blog/86/
 - concurrent Streaming https://github.com/willtim/Atavachron/blob/master/src/Atavachron/Streaming.hs#L59
+- http://hackage.haskell.org/package/streaming-concurrency-0.3.1.2/docs/Streaming-Concurrent.html

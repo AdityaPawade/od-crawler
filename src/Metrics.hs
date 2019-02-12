@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Metrics where
 
 import qualified System.Clock as CS
@@ -14,6 +12,7 @@ data Metrics =  Metrics {
   inputUrlsProcessed :: Counter,
   folders :: Counter,
   files :: Counter,
+  newFiles :: Counter,
   errors :: Counter
 }
 
@@ -25,10 +24,11 @@ handleMonitoring (Just p) = do
   handle <- M.forkServer "localhost" p
   inputUrlsProcessedCounter <- M.getCounter "crawler.input_urls_processed" handle
   foldersCounter <- M.getCounter "crawler.folders" handle
-  fileCounter <- M.getCounter "crawler.files" handle
+  filesCounter <- M.getCounter "crawler.files" handle
+  newFilesCounter <- M.getCounter "crawler.new_files" handle
   errorsCounter <- M.getCounter "crawler.errors" handle
   httpLatencyDistribution <- M.getDistribution "crawler.http_latency_ms" handle
-  pure $ Just $ Metrics httpLatencyDistribution inputUrlsProcessedCounter foldersCounter fileCounter errorsCounter
+  pure $ Just $ Metrics httpLatencyDistribution inputUrlsProcessedCounter foldersCounter filesCounter newFilesCounter errorsCounter
 
 timedMs :: IO a -> IO (a, Double)
 timedMs m = do

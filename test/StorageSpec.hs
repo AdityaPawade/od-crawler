@@ -1,10 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module StorageSpec (spec) where
 
 import Storage
 import Test.Hspec
-import qualified Data.Text as T
 
 spec :: Spec
 spec = do
