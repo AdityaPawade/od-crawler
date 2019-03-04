@@ -1,4 +1,4 @@
-- use an alternative safer Prelude
+- use an alternative safer Prelude (Protolude?)
 - try https://github.com/mrkkrp/modern-uri
 - try to write a benchmark with criterion https://github.com/bos/criterion
 - property testing with Hedgedog https://github.com/hedgehogqa/haskell-hedgehog

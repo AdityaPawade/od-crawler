@@ -45,10 +45,10 @@ incrementCounter :: Maybe Metrics -> (Metrics -> Counter) -> IO ()
 incrementCounter mm f =
   case mm of
     Nothing -> pure ()
-    Just m ->  MC.inc $ f m
+    Just m -> MC.inc $ f m
 
 addToDistribution :: Maybe Metrics -> (Metrics -> Distribution) -> Double -> IO ()
 addToDistribution mm f d =
   case mm of
     Nothing -> pure ()
-    Just m ->  MD.add (f m) d
+    Just m -> MD.add (f m) d

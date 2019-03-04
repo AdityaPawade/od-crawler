@@ -12,15 +12,15 @@ import qualified Data.Text.IO as TIO
 
 readUrlsFromFile :: String -> IO [Url]
 readUrlsFromFile filePath =
-  fmap T.lines (TIO.readFile filePath)
+  T.lines <$> TIO.readFile filePath
 
 createFileIfNotExist :: String -> IO ()
-createFileIfNotExist filePath = do
-  exists <- SD.doesFileExist filePath
-  if exists then
-    pure ()
-  else
-    SI.writeFile filePath ""
+createFileIfNotExist filePath =
+  SD.doesFileExist filePath >>= \exists ->
+    if exists then
+      pure ()
+    else
+      SI.writeFile filePath ""
 
 fileNameForURL :: Url -> String
 fileNameForURL url =
@@ -33,11 +33,9 @@ fileNameForURL url =
 -- https://www.stackage.org/haddock/lts-11.17/unordered-containers-0.2.9.0/Data-HashSet.html
 -- A bloom filter should actually be enough to reduce memory footprint
 loadPersistedResultsForURL :: String -> IO (HashSet Text)
-loadPersistedResultsForURL filePath = do
-  fileContent <- TIO.readFile filePath
-  let entries = fmap (last . T.splitOn " --> ") (T.lines fileContent)
-  let populatedSet = foldr HS.insert HS.empty entries
-  pure populatedSet
+loadPersistedResultsForURL filePath = buildSet <$> TIO.readFile filePath
+  where buildSet fileContent = foldr HS.insert HS.empty $ entries fileContent
+        entries fileContent = map (last . T.splitOn " --> ") (T.lines fileContent)
 
 validatePersistingFolder :: Maybe String -> IO ()
 validatePersistingFolder Nothing = pure ()

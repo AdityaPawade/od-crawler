@@ -1,2 +1,2 @@
 resolver: lts-12.26
-#resolver: lts-13.7 waiting for https://github.com/tibbe/ekg
+#resolver: lts-13.10 waiting for https://github.com/tibbe/ekg
