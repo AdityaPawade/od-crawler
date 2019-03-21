@@ -1,2 +1,4 @@
-resolver: lts-12.26
-#resolver: lts-13.10 waiting for https://github.com/tibbe/ekg
+resolver: lts-13.13
+
+extra-deps:
+- streamly-0.6.0 #only in nightly for the moment

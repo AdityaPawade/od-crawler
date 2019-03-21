@@ -27,7 +27,7 @@ runWithOptions opts = do
   urls <- urlsFromOption opts
   validatePersistingFolder df
   metricsHandler <- handleMonitoring $ monitoring opts
-  parallelChunking par urls (processRootURL desiredExtensions v df metricsHandler)
+  mapAsyncUnordered par urls (processRootURL desiredExtensions v df metricsHandler)
 
 urlsFromOption :: Options -> IO [Url]
 urlsFromOption opts =
@@ -104,12 +104,17 @@ httpCall url = do
   req <- NHS.parseRequest $ T.unpack url
   NHS.getResponseBody <$> NHS.httpBS req
 
-safeHttpCall :: Url -> IO (Either String ByteString)
-safeHttpCall url =
-  handleResponse <$> (CE.try (httpCall url) :: IO (Either CE.SomeException ByteString))
-  where
-    handleResponse (Left ex) = Left (show ex)
-    handleResponse (Right val) = Right val
+safeHttpCall :: Url -> IO (Either CE.SomeException ByteString)
+safeHttpCall url = CE.try (httpCall url)
+
+managedHttpCall :: Url -> Maybe Metrics -> IO (Either CE.SomeException ByteString)
+managedHttpCall url mm =
+  incGauge mm openConnections >> timedMs (safeHttpCall url) >>= \(safeBody, duration) -> do
+    decGauge mm openConnections
+    recDistribution mm httpLatency duration
+    case safeBody of
+      Left ex -> incCounter mm errors >> pure (Left ex)
+      Right body -> pure (Right body)
 
 verboseMode :: Config -> XML.Document -> [Text] -> Url -> IO ()
 verboseMode config doc links url =
@@ -134,7 +139,7 @@ handleResource config depth url r =
     File l | linkMatchesConfig config l ->
       case urlPersistentConfig config of
         Just cfg -> do
-          incrementCounter (metrics config) files
+          incCounter (metrics config) files
           if HS.member (fullLink l) (urlFilecontent cfg)
             then pure()
             else do
@@ -142,41 +147,46 @@ handleResource config depth url r =
               let pretty = prettyLink l
               TIO.putStrLn pretty
               TIO.hPutStrLn (fileHandle cfg) pretty
-              incrementCounter (metrics config) newFiles
+              incCounter (metrics config) newFiles
         Nothing ->
-          incrementCounter (metrics config) files >> TIO.putStrLn (prettyLink l)
+          incCounter (metrics config) files >> TIO.putStrLn (prettyLink l)
     Folder l | shouldFollow l url ->
-        incrementCounter (metrics config) folders >> crawlUrl config (depth + 1) (fullLink l)
+        incCounter (metrics config) folders >> crawlUrl config (depth + 1) (fullLink l)
     _ ->
         pure ()
 
 crawlUrl :: Config -> Int -> Url -> IO ()
 crawlUrl config depth url =
-  timedMs (safeHttpCall url) >>= \(safeBody, duration) ->
-    case safeBody of
-      Left ex ->
-        putStrLn ex >> incrementCounter (metrics config) errors
-      Right body -> do
-        addToDistribution (metrics config) httpLatency duration
-        let doc = bodyToDoc body
-        let extractedLinks = extractLinks doc
-        verboseMode config doc extractedLinks url
-        let links = map (createLink url) extractedLinks
-        let resources = map createResource links
-        -- at the root level - we process links by batches of 3 for speed
-        let par = if depth == 0 then 3 else 1
-        parallelChunking par resources (handleResource config depth url)
+  managedHttpCall url (metrics config) >>= \case
+    Left ex ->
+      print ex
+    Right body -> do
+      let doc = bodyToDoc body
+      let extractedLinks = extractLinks doc
+      verboseMode config doc extractedLinks url
+      let links = map (createLink url) extractedLinks
+      let resources = map createResource links
+      -- at the root level - we process links by batches of 3 to speed trees with many parent folders
+      -- FIXME need manual workers to tackle deep thin trees efficiently?
+      let par = if depth == 0 then 3 else 1
+      mapAsyncUnordered par resources (handleResource config depth url)
+
+crawlRootURL :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics -> Url -> IO ()
+crawlRootURL ext v df m url = case df of
+  Nothing ->
+    crawlUrl (Config ext v Nothing m) 0 url
+  Just folderPath -> do
+    let fileName = folderPath ++ "/" ++ fileNameForURL url
+    createFileIfNotExist fileName
+    existingContent <- loadPersistedResultsForURL fileName
+    SI.withFile fileName SI.AppendMode (\handler ->
+      let upc = URLPersistentConfig fileName handler existingContent
+          config = Config ext v (Just upc) m
+      in crawlUrl config 0 url)
 
 processRootURL :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics -> Url -> IO ()
-processRootURL ext v df m url =
-  case df of
-    Nothing ->
-      crawlUrl (Config ext v Nothing m) 0 url >> incrementCounter m inputUrlsProcessed
-    Just folderPath -> do
-      let fileName = folderPath ++ "/" ++ fileNameForURL url
-      createFileIfNotExist fileName
-      existingContent <- loadPersistedResultsForURL fileName
-      SI.withFile fileName SI.AppendMode (\handler ->
-        let upc = URLPersistentConfig fileName handler existingContent
-            config = Config ext v (Just upc) m
-        in crawlUrl config 0 url >> incrementCounter m inputUrlsProcessed)
+processRootURL ext v df m url = do
+  incGauge m inputUrlsInProgress
+  crawlRootURL ext v df m url
+  decGauge m inputUrlsInProgress
+  incCounter m inputUrlsProcessed

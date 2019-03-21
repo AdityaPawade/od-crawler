@@ -1,18 +1,26 @@
-- use an alternative safer Prelude (Protolude?)
-- try https://github.com/mrkkrp/modern-uri
-- try to write a benchmark with criterion https://github.com/bos/criterion
-- property testing with Hedgedog https://github.com/hedgehogqa/haskell-hedgehog
-- prevent cycles
-- have a look at parallelIO https://hackage.haskell.org/package/parallel-io-0.3.3
-- use a real LSM-tree when appending result to disk
-- bloom filter instead of HashSet
-- do logging the haskell way
-- define workers http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
-- http://hackage.haskell.org/package/async-pool-0.9.0.2/docs/Control-Concurrent-Async-Pool.html#t:Async
-- https://www.fpcomplete.com/blog/2016/11/comparative-concurrency-with-haskell
-- compare perf with Streamly https://github.com/composewell/streamly
-- profile and optims http://book.realworldhaskell.org/read/profiling-and-optimization.html
-- Threadscope https://wiki.haskell.org/ThreadScope
-- http://www.well-typed.com/blog/86/
-- concurrent Streaming https://github.com/willtim/Atavachron/blob/master/src/Atavachron/Streaming.hs#L59
-- http://hackage.haskell.org/package/streaming-concurrency-0.3.1.2/docs/Streaming-Concurrent.html
+# TODO
+
+- use an alternative safer Prelude
+  - https://github.com/sdiehl/protolude
+  - https://github.com/commercialhaskell/rio
+  - https://github.com/kowainik/relude
+
+- cleaner URI model https://github.com/mrkkrp/modern-uri
+
+- property testing with Hedgehog https://github.com/hedgehogqa/haskell-hedgehog
+
+- prevent cycles of links
+
+- clean concurrent crawling tree exploration
+  - define worker threads manually
+    - http://book.realworldhaskell.org/read/concurrent-and-multicore-programming.html
+    - https://www.fpcomplete.com/blog/2016/11/comparative-concurrency-with-haskell
+  - use pooling lib
+    - http://hackage.haskell.org/package/async-pool-0.9.0.2/docs/Control-Concurrent-Async-Pool.html#t:Async
+    - https://stackage.org/lts-13.13/package/parallel-io-0.3.3
+
+- profiling and optimization
+  - http://book.realworldhaskell.org/read/profiling-and-optimization.html
+  - Threadscope https://wiki.haskell.org/ThreadScope
+  - ghc-events-analyze http://www.well-typed.com/blog/86/
+  - try to write a benchmark with criterion https://github.com/bos/criterion
