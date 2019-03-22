@@ -72,4 +72,4 @@ A web monitoring interface can be enabled to follow the overall progress and the
 
 Then open `http://localhost:8000` to access the [EKG console](https://github.com/tibbe/ekg)
 
-![alt text](.monitoring.png "Monitoring")
+![monitoring example](monitoring.png "Monitoring")
