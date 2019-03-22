@@ -111,6 +111,7 @@ managedHttpCall :: Url -> Maybe Metrics -> IO (Either CE.SomeException ByteStrin
 managedHttpCall url mm =
   incGauge mm openConnections >> timedMs (safeHttpCall url) >>= \(safeBody, duration) -> do
     decGauge mm openConnections
+    incCounter mm totalRequests
     recDistribution mm httpLatency duration
     case safeBody of
       Left ex -> incCounter mm errors >> pure (Left ex)
