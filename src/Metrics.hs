@@ -1,5 +1,7 @@
 module Metrics where
 
+import Types
+
 import qualified System.Remote.Monitoring as M
 import qualified System.Metrics.Counter as MC
 import qualified System.Metrics.Gauge as MG
@@ -8,23 +10,9 @@ import System.Metrics.Counter (Counter)
 import System.Metrics.Gauge (Gauge)
 import System.Metrics.Distribution (Distribution)
 
-data Metrics =  Metrics {
-  httpLatency :: Distribution,
-  openConnections :: Gauge,
-  totalRequests :: Counter,
-  inputUrlsProcessed :: Counter,
-  inputUrlsInProgress :: Gauge,
-  folders :: Counter,
-  files :: Counter,
-  newFiles :: Counter,
-  errors :: Counter
-}
-
 -- https://hackage.haskell.org/package/ekg
-handleMonitoring :: Maybe Int -> IO (Maybe Metrics)
-handleMonitoring Nothing =
-  pure Nothing
-handleMonitoring (Just p) = do
+handleMonitoring :: Int -> IO Metrics
+handleMonitoring p = do
   handle <- M.forkServer "localhost" p
   inputUrlsProcessedCounter <- M.getCounter "crawler.input_urls.processed" handle
   inputUrlsInProgressGauge <- M.getGauge "crawler.input_urls.in_progress" handle
@@ -36,7 +24,7 @@ handleMonitoring (Just p) = do
   connectionsGauge <- M.getGauge "crawler.http.open_connections" handle
   requestsCounter <- M.getCounter "crawler.http.total_requests" handle
   let m = Metrics httpLatencyDistribution connectionsGauge requestsCounter inputUrlsProcessedCounter inputUrlsInProgressGauge foldersCounter filesCounter newFilesCounter errorsCounter
-  pure $ Just m
+  pure m
 
 incCounter :: Maybe Metrics -> (Metrics -> Counter) -> IO ()
 incCounter mm f =

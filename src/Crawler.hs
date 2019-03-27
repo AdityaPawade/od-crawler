@@ -26,7 +26,7 @@ runWithOptions opts = do
   let par = if parallel opts then 10 else 1
   urls <- urlsFromOption opts
   validatePersistingFolder df
-  metricsHandler <- handleMonitoring $ monitoring opts
+  metricsHandler <- maybe (pure Nothing) (fmap Just . handleMonitoring) (monitoring opts)
   mapAsyncUnordered par urls (processRootURL desiredExtensions v df metricsHandler)
 
 urlsFromOption :: Options -> IO [Url]
@@ -61,7 +61,8 @@ createLink url display
     -- full link
   | T.isPrefixOf "http" display =
     Link display display
-  | otherwise = Link display (T.concat [url, display])
+  | otherwise = Link display (T.concat [urlWithTrailingSlash, display])
+    where urlWithTrailingSlash = if T.last url == '/' then url else T.concat [url, "/"]
 
 -- only follow deeper link to Folder into the current path
 shouldFollow :: Link -> Text -> Bool

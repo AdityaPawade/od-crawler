@@ -1,9 +1,11 @@
 module Types where
 
-import Metrics
 import System.IO (Handle)
 import Data.Text (Text)
 import Data.HashSet (HashSet)
+import System.Metrics.Counter (Counter)
+import System.Metrics.Gauge (Gauge)
+import System.Metrics.Distribution (Distribution)
 
 type Url = Text
 
@@ -31,6 +33,18 @@ data Config = Config {
   debug               :: !Verbosity,
   urlPersistentConfig :: !(Maybe URLPersistentConfig),
   metrics             :: !(Maybe Metrics)
+}
+
+data Metrics = Metrics {
+  httpLatency         :: !Distribution,
+  openConnections     :: !Gauge,
+  totalRequests       :: !Counter,
+  inputUrlsProcessed  :: !Counter,
+  inputUrlsInProgress :: !Gauge,
+  folders             :: !Counter,
+  files               :: !Counter,
+  newFiles            :: !Counter,
+  errors              :: !Counter
 }
 
 data Options = Options {

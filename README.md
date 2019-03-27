@@ -6,6 +6,18 @@ Crawler for open directories.
 
 `Open directories are unprotected directories of pics, vids, music, software and otherwise interesting files.`
 
+## Installation
+
+There are no binaries available for the moment.
+
+The easiest way is to clone this repo and build the project locally with [Stack](https://docs.haskellstack.org/en/stable/README/)
+
+Install `Stack` and locally run in the project directory.
+
+`stack install`
+
+It will build and copy the `od-crawler` binary to your `bin` directory.
+
 ## Usage
 
 ```

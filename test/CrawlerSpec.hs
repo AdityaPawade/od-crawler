@@ -18,6 +18,12 @@ spec = do
       let expected = Link display (T.pack "https://root.com/a/b/c/linkDisplayName")
       createLink url display `shouldBe` expected
 
+    it "regular link (without trailing /)" $ do
+      let display  = T.pack "linkDisplayName"
+      let url      = T.pack "https://root.com/a/b/c"
+      let expected = Link display (T.pack "https://root.com/a/b/c/linkDisplayName")
+      createLink url display `shouldBe` expected
+
     it "relative parent link" $ do
       let display  = T.pack "../"
       let url      = T.pack "https://root.com/a/b/c/"

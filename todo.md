@@ -7,6 +7,10 @@
 
 - cleaner URI model https://github.com/mrkkrp/modern-uri
 
+- log file size as well (if present or ask for it?)
+
+- graph max of the gauges
+
 - property testing with Hedgehog https://github.com/hedgehogqa/haskell-hedgehog
 
 - prevent cycles of links
