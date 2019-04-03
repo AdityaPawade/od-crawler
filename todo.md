@@ -7,7 +7,7 @@
 
 - cleaner URI model https://github.com/mrkkrp/modern-uri
 
-- log file size as well (if present or ask for it?)
+- capture file size as well (if present or ask for it?)
 
 - graph max of the gauges
 

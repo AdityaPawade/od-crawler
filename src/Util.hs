@@ -8,7 +8,6 @@ mapAsyncUnordered :: Int -> [a] -> (a -> IO ()) -> IO ()
 mapAsyncUnordered par collection f =
   runStream
     $ asyncly -- https://stackage.org/haddock/lts-13.13/streamly-0.5.2/Streamly-Tutorial.html#g:2
-    $ avgRate 100000 -- https://github.com/composewell/streamly/issues/181
     $ maxThreads par
     $ S.fromFoldableM -- for some reason s.fromList is super slow
     $ fmap f collection

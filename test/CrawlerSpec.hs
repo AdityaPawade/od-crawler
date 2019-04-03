@@ -47,48 +47,48 @@ spec = do
       let display    = T.pack "d/"
       let url        = T.pack "https://root.com/a/b/c/d/"
       let currentUrl = T.pack "https://root.com/a/b/c/"
-      let link = Link display url
-      shouldFollow link currentUrl `shouldBe` True
+      let lk = Link display url
+      shouldFollow lk currentUrl `shouldBe` True
 
     it "block ascending link" $ do
       let display    = T.pack "b/"
       let url        = T.pack "https://root.com/a/b"
       let currentUrl = T.pack "https://root.com/a/b/c/"
-      let link = Link display url
-      shouldFollow link currentUrl `shouldBe` False
+      let lk = Link display url
+      shouldFollow lk currentUrl `shouldBe` False
 
     it "block identical link" $ do
       let display    = T.pack "c/"
       let url        = T.pack "https://root.com/a/b/c/"
       let currentUrl = T.pack "https://root.com/a/b/c/"
-      let link = Link display url
-      shouldFollow link currentUrl `shouldBe` False
+      let lk = Link display url
+      shouldFollow lk currentUrl `shouldBe` False
 
   describe "createResource" $ do
     it "create Folder" $ do
       let display    = T.pack "c/"
       let url        = T.pack "https://root.com/a/b/c/"
-      let link = Link display url
-      createResource link `shouldBe` Folder link
+      let lk = Link display url
+      createResource lk `shouldBe` Folder lk
 
     it "create File" $ do
       let display    = T.pack "c"
       let url        = T.pack "https://root.com/a/b/c"
-      let link = Link display url
-      createResource link `shouldBe` File link
+      let lk = Link display url
+      createResource lk `shouldBe` File lk
 
   describe "prettyLink" $ do
     it "works on non URL encoded link" $ do
       let display    = T.pack "c"
       let url        = T.pack "https://root.com/a/b/c"
-      let link = Link display url
-      prettyLink link `shouldBe` T.pack "c --> https://root.com/a/b/c"
+      let lk = Link display url
+      prettyLink lk `shouldBe` T.pack "c --> https://root.com/a/b/c"
 
     it "works on URL encoded link" $ do
       let display    = T.pack "my%20encoded%20file!"
       let url        = T.pack "https://root.com/a/b/my%20encoded%20file!"
-      let link = Link display url
-      prettyLink link `shouldBe` T.pack "my encoded file! --> https://root.com/a/b/my%20encoded%20file!"
+      let lk = Link display url
+      prettyLink lk `shouldBe` T.pack "my encoded file! --> https://root.com/a/b/my%20encoded%20file!"
 
   describe "extractLinksFromBody" $ do
     it "parse no href link" $ do
