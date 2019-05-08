@@ -7,7 +7,7 @@
 
 - cleaner URI model https://github.com/mrkkrp/modern-uri
 
-- capture file size as well (if present or ask for it?)
+- optionally capture file size as well via HEAD requests
 
 - graph max of the gauges
 
