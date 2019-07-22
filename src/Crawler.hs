@@ -103,7 +103,8 @@ extractLinks doc =
 httpCall :: Url -> IO ByteString
 httpCall url = do
   req <- NHS.parseRequest $ T.unpack url
-  NHS.getResponseBody <$> NHS.httpBS req
+  let gzipReq = NHS.setRequestHeader "Accept-Encoding" ["gzip"] req
+  NHS.getResponseBody <$> NHS.httpBS gzipReq
 
 safeHttpCall :: Url -> IO (Either CE.SomeException ByteString)
 safeHttpCall url = CE.try (httpCall url)
