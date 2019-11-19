@@ -1,4 +1,4 @@
-resolver: lts-13.29
+resolver: lts-14.15
 
 extra-deps:
-- streamly-0.6.1
+- streamly-0.7.0

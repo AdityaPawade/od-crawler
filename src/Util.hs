@@ -6,8 +6,8 @@ import qualified Streamly.Prelude as S
 
 mapAsyncUnordered :: Int -> [a] -> (a -> IO ()) -> IO ()
 mapAsyncUnordered par collection f =
-  runStream
-    $ asyncly -- https://stackage.org/haddock/lts-13.13/streamly-0.5.2/Streamly-Tutorial.html#g:2
+  S.drain
+    $ asyncly -- https://www.stackage.org/haddock/nightly-2019-11-17/streamly-0.7.0/Streamly-Tutorial.html
     $ maxThreads par
     $ S.fromFoldableM -- for some reason s.fromList is super slow
     $ fmap f collection
