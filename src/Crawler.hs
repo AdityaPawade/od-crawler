@@ -7,7 +7,7 @@ import Types
 
 import qualified Data.Text as T
 import Data.Text (Text)
-import qualified Data.Text.IO as TIO (putStrLn, hPutStrLn)
+import qualified Data.Text.IO as TIO (putStr, putStrLn, hPutStr)
 import qualified Control.Exception as CE
 import qualified System.IO as SI
 import qualified Data.HashSet as HS
@@ -38,29 +38,39 @@ urlsFromOption opts =
   where targetTxt = target opts
 
 profileExtensions :: Profile -> AllowedExtensions
-profileExtensions Videos = Only ["mkv", "avi", "mp4"]
+profileExtensions Videos = Only ["mkv", "avi", "mp4", "webm", "ogg"]
 profileExtensions Pictures = Only ["jpeg", "png", "gif", "bmp"]
 profileExtensions Music = Only ["mp3", "flac", "wave", "wav"]
-profileExtensions Docs = Only ["pdf", "epub", "txt", "doc"]
+profileExtensions Docs = Only ["pdf", "epub", "txt", "doc", "mobi"]
 profileExtensions SubTitles = Only ["srt", "sub"]
 profileExtensions NoProfile = AllowAll
 
 createLink :: Text -> Text -> Link
 createLink url display
-  -- relative link
+  -- relative parent (only one parent up link supported)
   | display == "../" =
     let urlU = if T.last url == '/' then T.init url else url
         parentLink = T.dropWhileEnd (/='/') urlU
         lastSegment = T.takeWhileEnd (/='/')(T.init parentLink)
     in Link lastSegment parentLink
-  -- absolute link
+   -- absolute link
   | T.head display == '/' =
-    let chunks = T.splitOn display url
-        location = T.concat[head chunks, display, "/"]
-    in  Link (T.takeWhileEnd (/='/') display) location
-    -- full link
+    if T.isInfixOf display url
+      then -- parent link
+        let chunks = T.splitOn display url
+            displayWithTrailingSlash = if T.last display == '/' then display else T.concat [display, "/"]
+            location = T.concat[head chunks, displayWithTrailingSlash]
+        in  Link (T.takeWhileEnd (/='/') display) location
+      else -- child link (folder or doc)
+        let chunks = T.splitOn "/" url
+            rootDomain = T.concat [head chunks, "//", chunks !!2]
+            location = T.concat [rootDomain, display]
+            lastSegment = T.takeWhileEnd (/='/')(if T.last display == '/' then T.init display else display)
+        in  Link lastSegment location
+  -- full http/https link
   | T.isPrefixOf "http" display =
     Link display display
+  -- what is left to handle?
   | otherwise = Link display (T.concat [urlWithTrailingSlash, display])
     where urlWithTrailingSlash = if T.last url == '/' then url else T.concat [url, "/"]
 
@@ -96,8 +106,8 @@ extractLinks :: XML.Document -> [Text]
 extractLinks doc =
   fromDocument doc
     $/ descendant
-    &/ element "a"
-    &.// attribute "href"
+    &/ laxElement "a"
+    &.// laxAttribute "href"
 
 -- https://hackage.haskell.org/package/http-conduit-2.3.1/docs/Network-HTTP-Simple.html
 httpCall :: Url -> IO ByteString
@@ -140,19 +150,20 @@ handleResource :: Config -> Int -> Text -> Resource -> IO ()
 handleResource config depth url r =
   case r of
     File l | linkMatchesConfig config l ->
-      case urlPersistentConfig config of
+      -- inject a new line manually to not use putStrLn which is not atomic
+      let pretty = T.concat [prettyLink l, "\n"]
+      in case urlPersistentConfig config of
         Just cfg -> do
           incCounter (metrics config) files
           if HS.member (fullLink l) (urlFilecontent cfg)
             then pure()
             else do
               --FIXME update Set to avoid possible duplicate in the page
-              let pretty = prettyLink l
-              TIO.putStrLn pretty
-              TIO.hPutStrLn (fileHandle cfg) pretty
+              TIO.putStr pretty
+              TIO.hPutStr (fileHandle cfg) pretty
               incCounter (metrics config) newFiles
         Nothing ->
-          incCounter (metrics config) files >> TIO.putStrLn (prettyLink l)
+          incCounter (metrics config) files >> TIO.putStr pretty
     Folder l | shouldFollow l url ->
         incCounter (metrics config) folders >> crawlUrl config (depth + 1) (fullLink l)
     _ ->

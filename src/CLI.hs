@@ -4,7 +4,6 @@ import Crawler
 import Types
 
 import Options.Applicative -- used as DSL
-import Data.Semigroup ((<>))
 import Data.Text (Text)
 
 mainCLI :: IO ()

@@ -24,6 +24,18 @@ spec = do
       let expected = Link display (T.pack "https://root.com/a/b/c/linkDisplayName")
       createLink url display `shouldBe` expected
 
+    it "absolute link to child (without trailing /)" $ do
+      let display  = T.pack "/a/b/c/d"
+      let url      = T.pack "https://root.com/a/b/c"
+      let expected = Link "d" (T.pack "https://root.com/a/b/c/d")
+      createLink url display `shouldBe` expected
+
+    it "absolute link to child (with trailing /)" $ do
+      let display  = T.pack "/a/b/c/d/"
+      let url      = T.pack "https://root.com/a/b/c"
+      let expected = Link "d" (T.pack "https://root.com/a/b/c/d/")
+      createLink url display `shouldBe` expected
+
     it "relative parent link" $ do
       let display  = T.pack "../"
       let url      = T.pack "https://root.com/a/b/c/"
@@ -110,5 +122,16 @@ spec = do
       </HEAD>
       <BODY LINK="800080" BGCOLOR="#ffffff">
       <P> <a href="https://www.w3schools.com">Visit W3Schools</a>  </P>
+      <PRE>|]
+      extractLinksFromBody (BS.pack body) `shouldBe` ["https://www.w3schools.com"]
+
+    it "parse href link (uppercased)" $ do
+      let body = [r|<HTML>
+      <HEAD>
+      <TITLE>Auto-generated html formated source</TITLE>
+      <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1252">
+      </HEAD>
+      <BODY LINK="800080" BGCOLOR="#ffffff">
+      <P> <A HREF="https://www.w3schools.com">Visit W3Schools</A>  </P>
       <PRE>|]
       extractLinksFromBody (BS.pack body) `shouldBe` ["https://www.w3schools.com"]
