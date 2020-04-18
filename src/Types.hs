@@ -16,7 +16,7 @@ data Link = Link {
 
 data Resource = Folder { link :: !Link } | File { link :: !Link } deriving (Show, Eq)
 
-data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles deriving Read
+data Profile = NoProfile | Videos | Music | Pictures | Docs | SubTitles | Archives deriving Read
 
 data Verbosity = Normal | Verbose
 

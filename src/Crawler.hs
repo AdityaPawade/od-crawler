@@ -41,7 +41,8 @@ profileExtensions :: Profile -> AllowedExtensions
 profileExtensions Videos = Only ["mkv", "avi", "mp4", "webm", "ogg"]
 profileExtensions Pictures = Only ["jpeg", "png", "gif", "bmp"]
 profileExtensions Music = Only ["mp3", "flac", "wave", "wav"]
-profileExtensions Docs = Only ["pdf", "epub", "txt", "doc", "mobi"]
+profileExtensions Docs = Only ["pdf", "epub", "txt", "doc", "mobi", "cbr", "cbz"]
+profileExtensions Archives = Only ["zip", "rar", "7z", "tar"]
 profileExtensions SubTitles = Only ["srt", "sub"]
 profileExtensions NoProfile = AllowAll
 
