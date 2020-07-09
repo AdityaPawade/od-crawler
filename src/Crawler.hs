@@ -194,10 +194,11 @@ crawlRootURL ext v df m url = case df of
     let fileName = folderPath ++ "/" ++ fileNameForURL url
     createFileIfNotExist fileName
     existingContent <- loadPersistedResultsForURL fileName
-    SI.withFile fileName SI.AppendMode (\handler ->
+    SI.withFile fileName SI.AppendMode (\handler -> do
+      SI.hSetBuffering handler SI.LineBuffering -- make sure to flush each line
       let upc = URLPersistentConfig fileName handler existingContent
-          config = Config ext v (Just upc) m
-      in crawlUrl config 0 url)
+      let config = Config ext v (Just upc) m
+      crawlUrl config 0 url)
 
 processRootURL :: AllowedExtensions -> Verbosity -> Maybe String -> Maybe Metrics -> Url -> IO ()
 processRootURL ext v df m url = do
